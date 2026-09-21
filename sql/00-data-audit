@@ -32,3 +32,38 @@ WHERE c.parent_category_id IS NOT NULL AND p.category_id IS NULL;
 -- Q: сколько корневых категорий?
 SELECT count(*) FROM marketplace.categories WHERE parent_category_id IS NULL; 
 -- A: 885 корневых категорий
+
+
+-- ===== orders =====
+
+-- Q: что вообще лежит в таблице?
+SELECT * FROM marketplace.orders LIMIT 10;
+-- A: идентификатор заказов, покупателей, дата и время оформления заказа, актуальный статус, сумма заказа
+
+-- Q: сколько строк в таблице?
+SELECT count(*) FROM marketplace.orders;
+-- A: в таблице 505400 строки
+
+-- Q: сколько уникальных заказов?
+SELECT count(DISTINCT order_id) FROM marketplace.orders;
+-- A: количество уникальных заказов совпадает с количеством строк - 505400 строки
+
+-- Q: сколько уникальных покупателей?
+SELECT count(DISTINCT buyer_id) FROM marketplace.orders;
+-- A: уникальных покупателей 55652
+
+-- Q: присутствуют ли пустые значения?
+SELECT * FROM marketplace.orders WHERE buyer_id IS NULL OR order_date IS NULL OR status IS NULL OR total_amount IS null;
+-- A: отсутствуют
+
+-- Q: за какой период выгружены данные?
+SELECT min(order_date), max(order_date) FROM marketplace.orders;
+-- A: данные выгружены за 2023-06-10 - 2025-06-09
+
+-- Q: какие статусы заказа бывают и их распределение?
+SELECT status, count(*) FROM marketplace.orders GROUP BY status;
+-- A: примерно равное распределение заказов по 4 статусам по 125 тыс строк
+
+-- Q: какое распределение суммы заказа?
+SELECT min(total_amount), round(avg(total_amount)), max(total_amount) FROM marketplace.orders;
+-- A: от 10 до 12700 условных единиц, среднее 3038
