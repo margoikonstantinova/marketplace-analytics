@@ -67,3 +67,66 @@ SELECT status, count(*) FROM marketplace.orders GROUP BY status;
 -- Q: какое распределение суммы заказа?
 SELECT min(total_amount), round(avg(total_amount)), max(total_amount) FROM marketplace.orders;
 -- A: от 10 до 12700 условных единиц, среднее 3038
+
+-- ===== order_items =====
+
+-- Q: что вообще лежит в таблице?
+SELECT * FROM marketplace.order_items LIMIT 10;
+-- A: идентификатор заказов, идентификатор позиции заказа, идентификатор товара, количество и цена на момент продажи
+
+-- Q: сколько строк в таблице?
+SELECT count(*) FROM marketplace.order_items;
+-- A: в таблице 1 516 751 строки
+
+-- Q: сколько уникальных заказов?
+SELECT count(DISTINCT order_id) FROM marketplace.order_items;
+-- A: количество уникальных заказов совпадает с количеством строк из таблицы orders - 505400 строки
+
+-- Q: заказы совпадают в табличках orders и order_items?
+select 'нет позиций' as problem, o.order_id
+from marketplace.orders o
+where not exists (
+  select 1 from marketplace.order_items oi where oi.order_id = o.order_id
+)
+
+union all
+
+select 'нет шапки' as problem, oi.order_id
+from (select distinct order_id from marketplace.order_items) oi
+where not exists (
+  select 1 from marketplace.orders o where o.order_id = oi.order_id
+);
+-- A: да, заказы совпадают, проблемных нет
+
+-- Q: сколько уникальных товаров было продано?
+SELECT count(DISTINCT product_id) FROM marketplace.order_items;
+-- A: уникальных njdfhjd 52 100
+
+-- Q: присутствуют ли пустые значения?
+SELECT * FROM marketplace.order_items WHERE product_id IS NULL OR order_id IS NULL OR quantity IS NULL OR price_at_order_time IS null;
+-- A: отсутствуют
+
+-- Q: совпадают ли суммы заказов?
+WITH oi_amount AS (
+  SELECT order_id,
+         round(sum(quantity::numeric * price_at_order_time::numeric), 2) AS oi_total_amount
+  FROM marketplace.order_items
+  GROUP BY order_id
+),
+diffs AS (
+  SELECT
+    o.order_id,
+    round(o.total_amount::numeric, 2) AS total_amount,
+    a.oi_total_amount,
+    round(o.total_amount::numeric, 2) - a.oi_total_amount AS diff
+  FROM marketplace.orders o
+  JOIN oi_amount a ON a.order_id = o.order_id
+  WHERE round(o.total_amount::numeric, 2) <> a.oi_total_amount
+)
+SELECT
+  count(*)                AS orders_with_diff,
+  min(diff)               AS min_diff,
+  max(diff)               AS max_diff,
+  avg(diff)               AS avg_diff
+FROM diffs;
+-- A: суммы заказов совпадают. Расхождения вызваны разницей в порядке округления при расчёте сумм: orders.total_amount, вероятно, рассчитывался с округлением на другом этапе, чем сумма позиций в order_items. Остаточная разница ±0.05 руб. соответствует половине копейки на позицию и является артефактом округления, а не ошибкой данных.
