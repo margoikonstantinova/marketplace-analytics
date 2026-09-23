@@ -68,6 +68,12 @@ SELECT status, count(*) FROM marketplace.orders GROUP BY status;
 SELECT min(total_amount), round(avg(total_amount)), max(total_amount) FROM marketplace.orders;
 -- A: от 10 до 12700 условных единиц, среднее 3038
 
+-- Q: как заказы распределяются по времени
+with m AS (
+SELECT order_id, date_trunc('MONTH', order_date ) AS mm FROM marketplace.orders)
+SELECT mm, count (order_id) FROM m GROUP BY mm ORDER BY mm;
+-- A: количество заказов регулярно растет
+
 -- ===== order_items =====
 
 -- Q: что вообще лежит в таблице?
@@ -130,3 +136,119 @@ SELECT
   avg(diff)               AS avg_diff
 FROM diffs;
 -- A: суммы заказов совпадают. Расхождения вызваны разницей в порядке округления при расчёте сумм: orders.total_amount, вероятно, рассчитывался с округлением на другом этапе, чем сумма позиций в order_items. Остаточная разница ±0.05 руб. соответствует половине копейки на позицию и является артефактом округления, а не ошибкой данных.
+
+
+-- ===== products =====
+
+-- Q: что вообще лежит в таблице?
+SELECT * FROM marketplace.products LIMIT 10;
+-- A: идентификатор, название и описание товаров, идентификатор категории, цена, но неизвестно, какая, послелняя на момент анализа базы?, количество товара в наличии и идентиикатор продавца
+
+-- Q: сколько строк в таблице?
+SELECT count(*) FROM marketplace.products;
+-- A: в таблице 52 100 строк
+
+-- Q: сколько уникальных товаров?
+SELECT count(DISTINCT products) FROM marketplace.products;
+-- A: количество уникальных товаров совпадает с общим количеством строк в таблице 
+
+-- Q: присутствуют ли пустые значения?
+SELECT * FROM marketplace.products WHERE title IS NULL OR description IS NULL OR category_id IS NULL OR price IS NULL OR seller_id IS NULL OR stock_quantity IS null;
+-- A: отсутствуют
+
+-- Q: сколько уникальных продавцов?
+SELECT count(DISTINCT seller_id) FROM marketplace.products;
+-- A: уникальных 33 813 продацов
+
+
+-- ===== reviews =====
+
+-- Q: что вообще лежит в таблице?
+SELECT * FROM marketplace.reviews LIMIT 10;
+-- A: идентификатор отзыва, идентификатор пользователя, оставивший отзыв, идентификатор товара, на который был оставлен отзыв, рейтинг, комментарий и дата оставления отзыва
+
+-- Q: сколько строк в таблице?
+SELECT count(*) FROM marketplace.reviews;
+-- A: в таблице 310 100 строк
+
+-- Q: присутствуют ли пустые значения?
+SELECT * FROM marketplace.reviews WHERE user_id IS NULL OR product_id IS NULL OR rating IS NULL OR comment IS NULL OR COMMENT = '' OR review_date IS NULL;
+-- A: отсутствуют
+
+-- Q: сколько уникальных пользователей, которые оставили отзыв?
+SELECT count(DISTINCT user_id) FROM marketplace.reviews;
+-- A: уникальных 55 441 пользователей, которые оставили отзывы
+
+-- Q: сколько в среднем отзывов оставляет 1 пользователь?
+SELECT count(*) / count(DISTINCT user_id) FROM marketplace.reviews;
+-- A: на одного отзыва приходится 5 отзывов
+
+-- Q: топ-10 по количеству отзывов
+SELECT product_id, count(*) FROM marketplace.reviews GROUP BY product_id ORDER BY count(*) DESC LIMIT 10;
+-- A: на одного отзыва приходится 5 отзывов
+
+-- Q: антитоп-10 по количеству отзывов
+SELECT product_id, count(*) FROM marketplace.reviews GROUP BY product_id ORDER BY count(*) asc LIMIT 10;
+
+-- Q: какие рейтингы оставляют?
+SELECT rating, count(*) FROM marketplace.reviews GROUP BY rating;
+-- A: количество отзывов равномерно распределены по рейтингу
+
+
+-- ===== transactions =====
+
+-- Q: что вообще лежит в таблице?
+SELECT * FROM marketplace.transactions LIMIT 10;
+-- A: идентификатор транзакции, идентификатор пользователя, сумма транзакции, тип и дата совершения транзации
+
+-- Q: сколько строк в таблице?
+SELECT count(*) FROM marketplace.transactions;
+-- A: в таблице 811 200
+
+-- Q: присутствуют ли пустые значения?
+SELECT * FROM marketplace.transactions WHERE user_id IS NULL OR amount IS NULL OR transaction_type IS NULL OR transaction_date IS NULL;
+-- A: отсутствуют
+
+-- Q: сколько уникальных пользователей совершали какую либо транзакцию?
+SELECT count(DISTINCT user_id) FROM marketplace.transactions;
+-- A: уникальных 111 211 пользователя
+
+-- Q: сколько в среднем операций на 1 пользователь?
+SELECT count(*) / count(DISTINCT user_id) FROM marketplace.transactions;
+-- A: на одного пользователя приходится по 7 операций
+
+-- Q: какое соотношение количества операций
+SELECT transaction_type, count(*) FROM marketplace.transactions GROUP BY transaction_type;
+-- A: количество операций равномерно распределены по рейтингу
+
+-- Q: какие суммы встречаются?
+SELECT min(amount), max(amount), avg(amount) FROM marketplace.transactions;
+-- A: количество операций равномерно распределены по рейтингу
+
+
+-- ===== users =====
+
+-- Q: что вообще лежит в таблице?
+SELECT * FROM marketplace.users LIMIT 10;
+-- A: идентификатор пользователя, имя, электронная почта, телефон, тип пользователя, дата регистрации и характеристика активности
+
+-- Q: сколько строк в таблице?
+SELECT count(*) FROM marketplace.users;
+-- A: в таблице 111 399
+
+-- Q: какое распределение по типам пользователя?
+SELECT user_type, count(*) FROM marketplace.users GROUP BY user_type;
+-- A: равное распределение по примерно 55 тысяч на селлер и баер
+
+-- Q: можно ли на одну почту зарегистрироваться несколько раз?
+SELECT email count(*) FROM marketplace.users GROUP BY email HAVING count(*) >1 ORDER BY count(*) desc;
+-- A: на один имейл может быть до 18 регистраций
+
+-- Q: присутствуют ли пустые значения?
+SELECT * FROM marketplace.users WHERE name IS NULL OR email IS NULL OR phone IS NULL OR user_type IS NULL OR registration_date IS NULL OR is_active IS null;
+-- A: отсутствуют
+
+-- Q: присутствуют ли пустые значения?
+SELECT * FROM marketplace.users WHERE name IS NULL OR email IS NULL OR phone IS NULL OR user_type IS NULL OR registration_date IS NULL OR is_active IS null;
+-- A: отсутствуют
+
