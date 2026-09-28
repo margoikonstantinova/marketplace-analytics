@@ -8,13 +8,13 @@ SELECT * FROM marketplace.categories LIMIT 10;
 -- A: идентификатор категории, имена — случайные слова, встречается строка 'None', 
 -- идентификатор родительской категории.
 
--- Q: Сколько строк с ловушками None?
-SELECT * FROM marketplace.categories WHERE name = 'None';
--- A: 2 строки.
-
 -- Q: сколько строк в таблице?
 SELECT count(*) FROM marketplace.categories;
 -- A: в таблице 1800 строк.
+
+-- Q: Сколько строк с ловушками None?
+SELECT * FROM marketplace.categories WHERE name = 'None';
+-- A: 2 строки.
 
 -- Q: сколько уникальных названий категорий?
 SELECT count(DISTINCT name) FROM marketplace.categories; 
@@ -40,11 +40,27 @@ SELECT count(*) FROM marketplace.categories WHERE parent_category_id IS NULL;
 -- Q: что вообще лежит в таблице?
 SELECT * FROM marketplace.orders LIMIT 10;
 -- A: идентификатор заказов, покупателей, дата и время оформления заказа, 
--- актуальный статус, сумма заказа.
+-- актуальный статус (совпадает ли со временем оформления заказа?),
+-- сумма заказа.
 
 -- Q: сколько строк в таблице?
 SELECT count(*) FROM marketplace.orders;
 -- A: в таблице 505400 строки.
+
+-- Q: за какой период выгружены данные?
+SELECT min(order_date), max(order_date) FROM marketplace.orders;
+-- A: данные выгружены за период 2023-06-10 - 2025-06-09.
+
+-- Q: как заказы распределяются по времени
+WITH orders_per_month AS (
+SELECT order_id, date_trunc('MONTH', order_date) AS yy_mm FROM marketplace.orders)
+SELECT yy_mm, count (order_id) FROM orders_per_month GROUP BY yy_mm ORDER BY yy_mm;
+-- A: количество заказов от месяца к месяцу растет.
+
+-- Q: присутствуют ли пустые значения?
+SELECT * FROM marketplace.orders 
+WHERE buyer_id IS NULL OR order_date IS NULL OR status IS NULL OR total_amount IS null;
+-- A: пустые значения отсутствуют.
 
 -- Q: сколько уникальных заказов?
 SELECT count(DISTINCT order_id) FROM marketplace.orders;
@@ -55,15 +71,6 @@ SELECT count(DISTINCT order_id) FROM marketplace.orders;
 SELECT count(DISTINCT buyer_id) FROM marketplace.orders;
 -- A: уникальных покупателей 55652.
 
--- Q: присутствуют ли пустые значения?
-SELECT * FROM marketplace.orders 
-WHERE buyer_id IS NULL OR order_date IS NULL OR status IS NULL OR total_amount IS null;
--- A: пустые значения отсутствуют.
-
--- Q: за какой период выгружены данные?
-SELECT min(order_date), max(order_date) FROM marketplace.orders;
--- A: данные выгружены за период 2023-06-10 - 2025-06-09.
-
 -- Q: какие статусы заказа бывают и их распределение?
 SELECT status, count(*) FROM marketplace.orders GROUP BY status;
 -- A: примерно равное распределение заказов по 4 статусам по 125 тыс строк.
@@ -73,11 +80,7 @@ SELECT status, count(*) FROM marketplace.orders GROUP BY status;
 SELECT min(total_amount), round(avg(total_amount)), max(total_amount) FROM marketplace.orders;
 -- A: от 10 до 12700 условных единиц, среднее 3038 у.е.
 
--- Q: как заказы распределяются по времени
-WITH orders_per_month AS (
-SELECT order_id, date_trunc('MONTH', order_date) AS yy_mm FROM marketplace.orders)
-SELECT yy_mm, count (order_id) FROM orders_per_month GROUP BY yy_mm ORDER BY yy_mm;
--- A: количество заказов от месяца к месяцу растет.
+
 
 -- ===== order_items =====
 
@@ -89,6 +92,12 @@ SELECT * FROM marketplace.order_items LIMIT 10;
 -- Q: сколько строк в таблице?
 SELECT count(*) FROM marketplace.order_items;
 -- A: в таблице 1516751 строки.
+
+-- Q: присутствуют ли пустые значения?
+SELECT * FROM marketplace.order_items 
+WHERE product_id IS NULL OR order_id IS NULL OR 
+      quantity IS NULL OR price_at_order_time IS null;
+-- A: пустые значения отсутствуют.
 
 -- Q: сколько уникальных заказов?
 SELECT count(DISTINCT order_id) FROM marketplace.order_items;
@@ -114,12 +123,6 @@ WHERE NOT EXISTS (
 -- Q: сколько уникальных товаров было продано?
 SELECT count(DISTINCT product_id) FROM marketplace.order_items;
 -- A: было продано 52100 уникальных товаров.
-
--- Q: присутствуют ли пустые значения?
-SELECT * FROM marketplace.order_items 
-WHERE product_id IS NULL OR order_id IS NULL OR 
-      quantity IS NULL OR price_at_order_time IS null;
--- A: пустые значения отсутствуют.
 
 -- Q: совпадают ли суммы заказов?
 WITH oi_amount AS (
@@ -164,16 +167,16 @@ SELECT * FROM marketplace.products LIMIT 10;
 SELECT count(*) FROM marketplace.products;
 -- A: в таблице 52100 строки.
 
--- Q: сколько уникальных товаров?
-SELECT count(DISTINCT product_id) FROM marketplace.products;
--- A: количество уникальных товаров совпадает с общим количеством строк в таблице -
--- 52100 товаров.
-
 -- Q: присутствуют ли пустые значения?
 SELECT * FROM marketplace.products 
 WHERE title IS NULL OR description IS NULL OR category_id IS NULL OR 
       price IS NULL OR seller_id IS NULL OR stock_quantity IS null;
 -- A: пустые значения отсутствуют.
+
+-- Q: сколько уникальных товаров?
+SELECT count(DISTINCT product_id) FROM marketplace.products;
+-- A: количество уникальных товаров совпадает с общим количеством строк в таблице -
+-- 52100 товаров.
 
 -- Q: сколько уникальных продавцов?
 SELECT count(DISTINCT seller_id) FROM marketplace.products;
@@ -191,6 +194,18 @@ SELECT * FROM marketplace.reviews LIMIT 10;
 -- Q: сколько строк в таблице?
 SELECT count(*) FROM marketplace.reviews;
 -- A: в таблице 310100 строки.
+
+-- Q: за какой период отзывы?
+SELECT min(review_date), max(review_date) FROM marketplace.reviews;
+-- A: отзывы за период 2023-06-12 - 2025-06-09.
+
+-- Q: как отзывы распределяются по времени?
+WITH reviews_per_month AS (
+SELECT review_id, date_trunc('MONTH', review_date) AS yy_mm FROM marketplace.reviews)
+SELECT yy_mm, count (review_id) FROM reviews_per_month GROUP BY yy_mm ORDER BY yy_mm;
+-- A: количество отзывов от месяца к месяцу растет,
+-- но в последний месяц не достигло пика.
+-- Это объясняется тем, что данные ограничены по 9 число месяца.
 
 -- Q: присутствуют ли пустые значения?
 SELECT * FROM marketplace.reviews 
@@ -218,7 +233,6 @@ GROUP BY product_id ORDER BY count(*) asc LIMIT 10;
 SELECT rating, count(*) FROM marketplace.reviews GROUP BY rating;
 -- A: оценки от 1 до 5 распределены примерно равномерно по 61 тыс.
 
-
 -- ===== transactions =====
 
 -- Q: что вообще лежит в таблице?
@@ -230,19 +244,31 @@ SELECT * FROM marketplace.transactions LIMIT 10;
 SELECT count(*) FROM marketplace.transactions;
 -- A: в таблице 811200 строки.
 
+-- Q: за какой период транзакции?
+SELECT min(transaction_date), max(transaction_date) FROM marketplace.transactions;
+-- A: транзакции за период 2023-06-11 - 2025-06-09.
+
+-- Q: как транзакции распределяются по времени?
+WITH transactions_per_month AS (
+SELECT transaction_id, date_trunc('MONTH', transaction_date) AS yy_mm FROM marketplace.transactions)
+SELECT yy_mm, count (transaction_id) FROM transactions_per_month GROUP BY yy_mm ORDER BY yy_mm;
+-- A: количество транзакций от месяца к месяцу растет,
+-- но в последний месяц не достигло пика.
+-- Это объясняется тем, что данные ограничены по 9 число месяца.
+
 -- Q: присутствуют ли пустые значения?
 SELECT * FROM marketplace.transactions 
 WHERE user_id IS NULL OR amount IS NULL OR 
       transaction_type IS NULL OR transaction_date IS NULL;
 -- A: пустые значения отсутствуют.
 
--- Q: сколько уникальных пользователей совершали какую либо транзакцию?
+-- Q: сколько уникальных пользователей совершили транзакцию?
 SELECT count(DISTINCT user_id) FROM marketplace.transactions;
--- A: 111211 уникальных пользователя совершали транзакции.
+-- A: 111211 уникальных пользователя совершили транзакции.
 
--- Q: сколько в среднем операций на 1 пользователь?
+-- Q: сколько в среднем операций на 1 пользователя?
 SELECT count(*) / count(DISTINCT user_id) FROM marketplace.transactions;
--- A: на одного пользователя приходится по 7 операций.
+-- A: на одного пользователя приходится в среднем по 7 операций.
 
 -- Q: какие операции встречаются и их распределение?
 SELECT transaction_type, count(*) FROM marketplace.transactions GROUP BY transaction_type;
@@ -265,6 +291,17 @@ SELECT * FROM marketplace.users LIMIT 10;
 SELECT count(*) FROM marketplace.users;
 -- A: в таблице 111399 строки.
 
+-- Q: за какой период регистрации?
+SELECT min(registration_date), max(registration_date) FROM marketplace.users;
+-- A: регистрации за период 2023-06-10 - 2025-06-09.
+
+-- Q: как транзакции распределяются по времени?
+WITH registrations_per_month AS (
+SELECT user_id, date_trunc('MONTH', registration_date) AS yy_mm FROM marketplace.users)
+SELECT yy_mm, count (user_id) FROM registrations_per_month GROUP BY yy_mm ORDER BY yy_mm;
+-- A: количество регистраций стабильно на протяжении всего срока.
+-- По ~4700 регистраций в месяц.
+
 -- Q: какое распределение по типам пользователя?
 SELECT user_type, count(*) FROM marketplace.users GROUP BY user_type;
 -- A: равное распределение по примерно 55 тысяч на buyer и seller.
@@ -275,5 +312,9 @@ GROUP BY email HAVING count(*) >1 ORDER BY count(*) desc;
 -- A: на один email может быть до 18 регистраций.
 
 -- Q: присутствуют ли пустые значения?
-SELECT * FROM marketplace.users WHERE name IS NULL OR email IS NULL OR phone IS NULL OR user_type IS NULL OR registration_date IS NULL OR is_active IS null;
+SELECT * FROM marketplace.users 
+WHERE name IS NULL OR email IS NULL OR phone IS NULL OR
+	  user_type IS NULL OR registration_date IS NULL OR 
+	  is_active IS null;
 -- A: пустые значения отсутствуют.
+
