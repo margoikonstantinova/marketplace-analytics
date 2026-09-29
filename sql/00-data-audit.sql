@@ -40,8 +40,7 @@ SELECT count(*) FROM marketplace.categories WHERE parent_category_id IS NULL;
 -- Q: что вообще лежит в таблице?
 SELECT * FROM marketplace.orders LIMIT 10;
 -- A: идентификатор заказов, покупателей, дата и время оформления заказа, 
--- актуальный статус (совпадает ли со временем оформления заказа?),
--- сумма заказа.
+-- актуальный статус, сумма заказа.
 
 -- Q: сколько строк в таблице?
 SELECT count(*) FROM marketplace.orders;
@@ -147,7 +146,7 @@ SELECT
   max(diff)               AS max_diff,
   avg(diff)               AS avg_diff
 FROM diffs;
--- A: суммы заказов совпадают.
+-- A: большинство сумм заказов совпадают.
 -- Расхождения вызваны разницей в порядке округления при расчёте сумм:
 -- orders.total_amount, вероятно, рассчитывался с округлением на другом этапе,
 -- чем сумма позиций в order_items.
@@ -180,7 +179,7 @@ SELECT count(DISTINCT product_id) FROM marketplace.products;
 
 -- Q: сколько уникальных продавцов?
   SELECT count(DISTINCT seller_id) FROM marketplace.products;
--- A: уникальных 33813 продацов.
+-- A: уникальных 33813 продавцов.
 
 
 -- ===== reviews =====
@@ -221,13 +220,18 @@ SELECT count(DISTINCT user_id) FROM marketplace.reviews;
 SELECT count(*) / count(DISTINCT user_id) FROM marketplace.reviews;
 -- A: на одного пользователя приходится в среднем по 5 отзывов.
 
--- Q: топ-10 по количеству отзывов
-SELECT product_id, count(*) FROM marketplace.reviews 
-GROUP BY product_id ORDER BY count(*) DESC LIMIT 10;
-
--- Q: антитоп-10 по количеству отзывов
-SELECT product_id, count(*) FROM marketplace.reviews 
-GROUP BY product_id ORDER BY count(*) asc LIMIT 10;
+-- Q: какое количество отзывов получает продукт?
+SELECT 
+    MAX(cnt) AS max_reviews,
+    ROUND(AVG(cnt)) AS avg_reviews,
+    MIN(cnt) AS min_reviews
+FROM (
+    SELECT product_id, COUNT(*) AS cnt
+    FROM marketplace.reviews
+    GROUP BY product_id
+) t;
+-- A: минимум 1, в среднем по 6 отзывов на продукт, 
+-- максимум 19 отзывов на продукт.
 
 -- Q: какую оценку оставляют пользователи чаще всего?
 SELECT rating, count(*) FROM marketplace.reviews GROUP BY rating;
