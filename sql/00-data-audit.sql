@@ -179,7 +179,7 @@ SELECT count(DISTINCT product_id) FROM marketplace.products;
 -- 52100 товаров.
 
 -- Q: сколько уникальных продавцов?
-SELECT count(DISTINCT seller_id) FROM marketplace.products;
+  SELECT count(DISTINCT seller_id) FROM marketplace.products;
 -- A: уникальных 33813 продацов.
 
 
@@ -302,19 +302,27 @@ SELECT yy_mm, count (user_id) FROM registrations_per_month GROUP BY yy_mm ORDER 
 -- A: количество регистраций стабильно на протяжении всего срока.
 -- По ~4700 регистраций в месяц.
 
--- Q: какое распределение по типам пользователя?
-SELECT user_type, count(*) FROM marketplace.users GROUP BY user_type;
--- A: равное распределение по примерно 55 тысяч на buyer и seller.
-
--- Q: можно ли на одну почту зарегистрироваться несколько раз?
-SELECT email, count(*) FROM marketplace.users 
-GROUP BY email HAVING count(*) >1 ORDER BY count(*) desc;
--- A: на один email может быть до 18 регистраций.
-
 -- Q: присутствуют ли пустые значения?
 SELECT * FROM marketplace.users 
 WHERE name IS NULL OR email IS NULL OR phone IS NULL OR
 	  user_type IS NULL OR registration_date IS NULL OR 
 	  is_active IS null;
 -- A: пустые значения отсутствуют.
+
+-- Q: какое распределение по типам пользователя?
+SELECT user_type, count(*) FROM marketplace.users GROUP BY user_type;
+-- A: равное распределение по примерно 55 тысяч на buyer и seller.
+
+-- Q: как активность распределена по типам пользователей?
+SELECT user_type, is_active, count(*)
+FROM marketplace.users GROUP BY user_type, is_active;
+-- A: активность распределена примерно поровну по типам пользователей.
+-- По ~27 тыс активных и ~28 тыс неактивных пользователей на buyer и seller.
+
+-- Q: можно ли на одну почту зарегистрироваться несколько раз?
+SELECT email, count(*) FROM marketplace.users 
+GROUP BY email HAVING count(*) >1 ORDER BY count(*) desc;
+-- A: на один email может быть до 18 регистраций.
+
+
 

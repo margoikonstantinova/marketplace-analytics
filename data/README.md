@@ -64,7 +64,7 @@
 | `category_id`    | int4        | FK   | false    | категория товара (→ categories.category_id) |
 | `price`          | float4      |      | false    | цена товара                                 |
 | `stock_quantity` | int4        |      | false    | количество товара в наличии                 |
-| `seller_id`      | varchar(50) |      | false    | ID продавца                                 |
+| `seller_id`      | varchar(50) |      | false    | ID продавца (→ users.user_id)                                 |
 
 ### Таблица `reviews` — отзывы
 Содержит отзывы пользователей.
